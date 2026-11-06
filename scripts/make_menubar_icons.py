@@ -3,7 +3,7 @@
 
 The drawing is the favicon's (three faders with a knob each) as a macOS "template" image: black on
 transparent, so the menu bar tints it for light and dark mode. A template can't carry colours, so
-the favicon's dark tile and the blue/green/white knobs are gone; "waiting" is the same drawing
+the favicon's dark tile and its blue and warm knobs are gone; "waiting" is the same drawing
 faded, "connected" is full strength.
 """
 from pathlib import Path
@@ -13,9 +13,10 @@ from AppKit import (NSBezierPath, NSBitmapImageRep, NSColor, NSGraphicsContext,
 
 OUT = Path(__file__).resolve().parent.parent / "src" / "consolelink" / "menubar_icons"
 PIXELS = 40  # drawn for a 20 pt menu-bar slot at 2x (Retina)
-SCALE = PIXELS / 32  # the favicon is drawn on a 32 x 32 grid
+SCALE = PIXELS / 32  # laid out on a 32 x 32 grid; favicon.svg is the same layout on 256 x 256
 
-# From favicon.svg: fader tracks (x, y, w, h) and knobs (x, y, w, h), y measured from the top.
+# From favicon.svg, divided by 8: fader tracks (x, y, w, h) and knobs (x, y, w, h), y measured from
+# the top.
 TRACKS = [(7, 6, 2, 20), (15, 6, 2, 20), (23, 6, 2, 20)]
 KNOBS = [(4.5, 16, 7, 4), (12.5, 9, 7, 4), (20.5, 20, 7, 4)]
 

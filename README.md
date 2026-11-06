@@ -1,5 +1,7 @@
 # ConsoleLink
 
+by [Cuemodo](https://cuemodo.io)
+
 ConsoleLink is an original software tool designed to communicate with existing lighting desks
 and add new features:
 

@@ -1,3 +1,5 @@
+<img src="https://raw.githubusercontent.com/cuemodo/consolelink/main/docs/images/consolelink-icon.png" alt="ConsoleLink app icon: three lighting faders on a dark rounded square, two blue and the raised center fader glowing warm white." width="128">
+
 # ConsoleLink
 
 by [Cuemodo](https://cuemodo.io)
@@ -36,11 +38,11 @@ Use at your own risk; no warranty is provided.
 
 The web app (`consolelink`) in a desktop browser:
 
-![consolelink web app on a desktop browser: Master, Bumps, Independents, Crossfader and both LCDs on top, then the INT A, INT B and INT DEV intensity rows and the 24 physical faders](https://raw.githubusercontent.com/gaeljaffrain/consolelink/main/screenshots/desktop_v0.1.5.png)
+![consolelink web app on a desktop browser: Master, Bumps, Independents, Crossfader and both LCDs on top, then the INT A, INT B and INT DEV intensity rows and the 24 physical faders](https://raw.githubusercontent.com/cuemodo/consolelink/main/docs/screenshots/desktop_v0.1.5.png)
 
 And on a phone, where each row wraps to 6 columns:
 
-<img src="https://raw.githubusercontent.com/gaeljaffrain/consolelink/main/screenshots/mobile_v0.1.5.png" width="300" alt="consolelink web app on a phone: the same controls with rows wrapped to 6 columns">
+<img src="https://raw.githubusercontent.com/cuemodo/consolelink/main/docs/screenshots/mobile_v0.1.5.png" width="300" alt="consolelink web app on a phone: the same controls with rows wrapped to 6 columns">
 
 ## Requirements
 
@@ -203,7 +205,7 @@ ipconfig                 # Windows (look for "IPv4 Address" under your Wi-Fi or 
 
 ### macOS menu-bar app
 
-<img src="https://raw.githubusercontent.com/gaeljaffrain/consolelink/main/screenshots/menubar_v0.1.5.png" width="400" alt="consolelink menubar: GUI for all options">
+<img src="https://raw.githubusercontent.com/cuemodo/consolelink/main/docs/screenshots/menubar_v0.1.5.png" width="400" alt="consolelink menubar: GUI for all options">
 
 On macOS the same service can run from the menu bar instead of the command line (no Dock icon, no flags to remember).
 It needs the `menubar` extra (see [Install](#install)); then start it with:
@@ -255,12 +257,12 @@ visualisation and casual use, not for anything where a stall or a frozen frame w
 ## Contributing
 
 Working on the code, running the tests or making a release? See
-[CONTRIBUTING.md](https://github.com/gaeljaffrain/consolelink/blob/main/CONTRIBUTING.md), which also
+[CONTRIBUTING.md](https://github.com/cuemodo/consolelink/blob/main/CONTRIBUTING.md), which also
 explains how the console protocol works and how it was studied.
 
 ## License
 
-MIT -- see [`LICENSE`](https://github.com/gaeljaffrain/consolelink/blob/main/LICENSE).
+MIT -- see [`LICENSE`](https://github.com/cuemodo/consolelink/blob/main/LICENSE).
 
 ## Credits
 

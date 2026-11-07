@@ -41,9 +41,9 @@ menubar = [  # the menu-bar app (consolelink-menubar); installs nothing off macO
 dev = ["pytest", "bump-my-version", "build", "twine"]
 
 [project.urls]
-Homepage = "https://github.com/gaeljaffrain/consolelink"
-Repository = "https://github.com/gaeljaffrain/consolelink"
-Issues = "https://github.com/gaeljaffrain/consolelink/issues"
+Homepage = "https://github.com/cuemodo/consolelink"
+Repository = "https://github.com/cuemodo/consolelink"
+Issues = "https://github.com/cuemodo/consolelink/issues"
 
 [project.scripts]
 consolelink = "consolelink.app:main"

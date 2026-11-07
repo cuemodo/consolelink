@@ -1,7 +1,7 @@
 # Contributing to ConsoleLink
 
 Notes for working on the code. For installing and using ConsoleLink, see the
-[README](https://github.com/gaeljaffrain/consolelink/blob/main/README.md).
+[README](https://github.com/cuemodo/consolelink/blob/main/README.md).
 
 ## Contents
 
@@ -25,7 +25,7 @@ ConsoleLink also proactively requests the types it needs at connect time
 the console's own unprompted announce loses a race against the OS's USB
 probing on connect.
 
-See [`protocol.py`](https://github.com/gaeljaffrain/consolelink/blob/main/src/consolelink/protocol.py)'s module docstring for the full message-type breakdown
+See [`protocol.py`](https://github.com/cuemodo/consolelink/blob/main/src/consolelink/protocol.py)'s module docstring for the full message-type breakdown
 (which types are decoded, which are known-but-not-yet decoded, and why).
 
 ## Protocol study process
@@ -42,17 +42,17 @@ traces could be matched to a specific action.
 
 | File | What it is |
 |---|---|
-| [`src/consolelink/protocol.py`](https://github.com/gaeljaffrain/consolelink/blob/main/src/consolelink/protocol.py) | Shared library: USB framing, the idle-poll/announce/ack handshake, and decoders for every known message type. Everything else imports this rather than re-deriving the protocol. |
-| [`src/consolelink/app.py`](https://github.com/gaeljaffrain/consolelink/blob/main/src/consolelink/app.py) | The program (the `consolelink` command): polls the console in a background thread and serves [`index.html`](https://github.com/gaeljaffrain/consolelink/blob/main/src/consolelink/static/index.html) over Server-Sent Events, so a browser tab shows live values. With `--no-web` it only polls (logging changes with `--debug`, or sending Art-Net). |
-| [`src/consolelink/menubar.py`](https://github.com/gaeljaffrain/consolelink/blob/main/src/consolelink/menubar.py), [`menubar_logic.py`](https://github.com/gaeljaffrain/consolelink/blob/main/src/consolelink/menubar_logic.py), [`menubar_qr.py`](https://github.com/gaeljaffrain/consolelink/blob/main/src/consolelink/menubar_qr.py), [`settings_store.py`](https://github.com/gaeljaffrain/consolelink/blob/main/src/consolelink/settings_store.py) | The macOS menu-bar app (`consolelink-menubar`): `menubar.py` is the thin rumps layer, `menubar_logic.py` and `settings_store.py` hold the testable decisions and the saved settings, and `menubar_qr.py` draws the server address as a QR code (Core Image, no extra dependency). It drives `app.Service`, the same start/stop API `consolelink` uses. |
-| [`scripts/make_menubar_icons.py`](https://github.com/gaeljaffrain/consolelink/blob/main/scripts/make_menubar_icons.py) | Draws the menu-bar icons (macOS, PyObjC) into `src/consolelink/menubar_icons/`; run again after changing the drawing. |
-| [`src/consolelink/artnet.py`](https://github.com/gaeljaffrain/consolelink/blob/main/src/consolelink/artnet.py) | Optional Art-Net output of the two DMX universes, enabled with `--artnet`. |
-| [`src/consolelink/static/index.html`](https://github.com/gaeljaffrain/consolelink/blob/main/src/consolelink/static/index.html) | Static single-page UI for `consolelink`: intensity meters (INT A / INT B / INT DEV), physical faders, most important buttons and indicators, like BlackOut and Master, and a mirror of the console's two LCDs, plus a "DMX Outputs" tab showing both DMX universes (1024 channels) at once. |
-| [`src/consolelink/static/app.js`](https://github.com/gaeljaffrain/consolelink/blob/main/src/consolelink/static/app.js) | Front-end logic for `index.html`: builds the meter grid, connects to the SSE stream, and renders each incoming state update. |
-| [`src/consolelink/static/style.css`](https://github.com/gaeljaffrain/consolelink/blob/main/src/consolelink/static/style.css) | Styling for `index.html`: colours, the meter and indicator layout, the blinking-LED animations, and the breakpoints that reflow the page for phones. |
-| [`src/consolelink/static/favicon.svg`](https://github.com/gaeljaffrain/consolelink/blob/main/src/consolelink/static/favicon.svg) | The browser tab icon. |
-| [`pyproject.toml`](https://github.com/gaeljaffrain/consolelink/blob/main/pyproject.toml) | Packaging: makes `pip install .` install the package, its web files and the `consolelink` command; lists the dependencies, including the `dev` extra (`pytest`, `bump-my-version`) and the `menubar` extra (`rumps`, `keyring`; macOS only). |
-| [`tests/`](https://github.com/gaeljaffrain/consolelink/blob/main/tests/) | Decoder and server tests, replaying recorded console traffic from [`tests/fixtures/`](https://github.com/gaeljaffrain/consolelink/blob/main/tests/fixtures/) -- no console needed. |
+| [`src/consolelink/protocol.py`](https://github.com/cuemodo/consolelink/blob/main/src/consolelink/protocol.py) | Shared library: USB framing, the idle-poll/announce/ack handshake, and decoders for every known message type. Everything else imports this rather than re-deriving the protocol. |
+| [`src/consolelink/app.py`](https://github.com/cuemodo/consolelink/blob/main/src/consolelink/app.py) | The program (the `consolelink` command): polls the console in a background thread and serves [`index.html`](https://github.com/cuemodo/consolelink/blob/main/src/consolelink/static/index.html) over Server-Sent Events, so a browser tab shows live values. With `--no-web` it only polls (logging changes with `--debug`, or sending Art-Net). |
+| [`src/consolelink/menubar.py`](https://github.com/cuemodo/consolelink/blob/main/src/consolelink/menubar.py), [`menubar_logic.py`](https://github.com/cuemodo/consolelink/blob/main/src/consolelink/menubar_logic.py), [`menubar_qr.py`](https://github.com/cuemodo/consolelink/blob/main/src/consolelink/menubar_qr.py), [`settings_store.py`](https://github.com/cuemodo/consolelink/blob/main/src/consolelink/settings_store.py) | The macOS menu-bar app (`consolelink-menubar`): `menubar.py` is the thin rumps layer, `menubar_logic.py` and `settings_store.py` hold the testable decisions and the saved settings, and `menubar_qr.py` draws the server address as a QR code (Core Image, no extra dependency). It drives `app.Service`, the same start/stop API `consolelink` uses. |
+| [`scripts/make_menubar_icons.py`](https://github.com/cuemodo/consolelink/blob/main/scripts/make_menubar_icons.py) | Draws the menu-bar icons (macOS, PyObjC) into `src/consolelink/menubar_icons/`; run again after changing the drawing. |
+| [`src/consolelink/artnet.py`](https://github.com/cuemodo/consolelink/blob/main/src/consolelink/artnet.py) | Optional Art-Net output of the two DMX universes, enabled with `--artnet`. |
+| [`src/consolelink/static/index.html`](https://github.com/cuemodo/consolelink/blob/main/src/consolelink/static/index.html) | Static single-page UI for `consolelink`: intensity meters (INT A / INT B / INT DEV), physical faders, most important buttons and indicators, like BlackOut and Master, and a mirror of the console's two LCDs, plus a "DMX Outputs" tab showing both DMX universes (1024 channels) at once. |
+| [`src/consolelink/static/app.js`](https://github.com/cuemodo/consolelink/blob/main/src/consolelink/static/app.js) | Front-end logic for `index.html`: builds the meter grid, connects to the SSE stream, and renders each incoming state update. |
+| [`src/consolelink/static/style.css`](https://github.com/cuemodo/consolelink/blob/main/src/consolelink/static/style.css) | Styling for `index.html`: colours, the meter and indicator layout, the blinking-LED animations, and the breakpoints that reflow the page for phones. |
+| [`src/consolelink/static/favicon.svg`](https://github.com/cuemodo/consolelink/blob/main/src/consolelink/static/favicon.svg) | The browser tab icon. |
+| [`pyproject.toml`](https://github.com/cuemodo/consolelink/blob/main/pyproject.toml) | Packaging: makes `pip install .` install the package, its web files and the `consolelink` command; lists the dependencies, including the `dev` extra (`pytest`, `bump-my-version`) and the `menubar` extra (`rumps`, `keyring`; macOS only). |
+| [`tests/`](https://github.com/cuemodo/consolelink/tree/main/tests/) | Decoder and server tests, replaying recorded console traffic from [`tests/fixtures/`](https://github.com/cuemodo/consolelink/blob/main/tests/fixtures/) -- no console needed. |
 
 ## Install from source
 

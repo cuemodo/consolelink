@@ -261,3 +261,7 @@ explains how the console protocol works and how it was studied.
 ## License
 
 MIT -- see [`LICENSE`](https://github.com/gaeljaffrain/consolelink/blob/main/LICENSE).
+
+## Credits
+
+Art-Net™ Designed by and Copyright Artistic Licence Engineering Ltd

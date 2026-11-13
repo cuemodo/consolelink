@@ -17,7 +17,7 @@ KEYCHAIN_ACCOUNT = "control-password"
 
 # The Settings fields worth remembering between runs: the rest (debug, capture, Art-Net rate...)
 # are for the command line.
-PERSISTED = ("listen", "port", "allow_write", "artnet_dest", "artnet_universe")
+PERSISTED = ("listen", "port", "allow_write", "artnet_dest", "artnet_universe", "smartsoft_bridge")
 
 
 def default_path():
@@ -63,6 +63,8 @@ class SettingsStore:
             wanted = type(getattr(defaults, name))
             if name == "artnet_dest":
                 ok = value is None or isinstance(value, str)
+            elif name == "smartsoft_bridge":   # a port, or None for off
+                ok = value is None or type(value) is int
             else:
                 ok = type(value) is wanted
             values[name] = value if ok else getattr(defaults, name)
@@ -74,9 +76,14 @@ class SettingsStore:
         try:
             settings.validate()
         except ValueError:
-            # e.g. a saved network + control without a password (the keychain entry is gone):
-            # come up read-only rather than refusing to start.
+            # e.g. a saved network + control without a password (the keychain entry is gone), or
+            # control together with the SmartSoft bridge: come up read-only rather than refusing
+            # to start.
             settings = dataclasses.replace(settings, allow_write=False)
+            try:
+                settings.validate()
+            except ValueError:   # still wrong (a bridge port out of range): bridge off
+                settings = dataclasses.replace(settings, smartsoft_bridge=None)
         return settings
 
     def save(self, settings):

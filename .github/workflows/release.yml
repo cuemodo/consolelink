@@ -22,9 +22,18 @@ jobs:
       - uses: actions/setup-python@v7
         with:
           python-version: "3.13"
+      - name: Build the SmartSoft bridge DLL (shipped in the package)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc-mingw-w64-i686
+          make -C bridge/windows package
       - run: pip install -e ".[dev]"
       - run: python -m pytest
       - run: python -m build && twine check dist/*
+      - name: The wheel and the sdist must contain the bridge DLL
+        run: |
+          unzip -l dist/*.whl | grep -q "consolelink/bridge_dll/hid.dll"
+          tar tzf dist/*.tar.gz | grep -q "src/consolelink/bridge_dll/hid.dll"
       - uses: actions/upload-artifact@v7
         with:
           name: dist

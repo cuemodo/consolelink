@@ -5,7 +5,12 @@ current output, plus the console's per-mode intensity memory.
 Run:
     consolelink [--debug] [--capture PATH] [--no-web] [--artnet [DEST]]
               [--listen localhost|network] [--port N] [--allow-write [PASSWORD]]
+              [--smartsoft-bridge [PORT]]
 (or `python -m consolelink ...`; `pip install -e .` from the repo creates the command).
+
+--smartsoft-bridge [PORT] (experimental): instead of polling the console, relay ETC SmartSoft for
+Windows running under CrossOver (bridge/windows/ in the repository, and smartsoft_bridge.py). The
+page and Art-Net follow the relayed traffic, read-only.
 Then open http://localhost:8765 in a browser (--port N for another port). By default only this machine can reach the page
 (--listen localhost); --listen network also serves it to other devices on the same network, at
 http://<this Mac's LAN IP>:8765 (e.g. `ipconfig getifaddr en0` for the IP; macOS will prompt to
@@ -88,6 +93,7 @@ except ImportError:
 
 from . import artnet
 from . import protocol as sfl
+from . import smartsoft_bridge
 
 # --listen: "localhost" binds loopback only (this machine); "network" binds every interface, so
 # other devices on the network (a phone, another computer) can connect.
@@ -674,6 +680,41 @@ def poll_forever(stop_event):
         stop_event.wait(1.0)
 
 
+def bridge_console_changed(identity):
+    """smartsoft_bridge's on_console: identity is (vid, pid, bcd, product), or None when lost."""
+    update_state(connected=identity is not None,
+                 device=sfl.MODEL_NAMES.get(identity[1]) if identity else None, console_busy=False)
+
+
+def bridge_forever(stop_event, bridge):
+    """--smartsoft-bridge: relay SmartSoft (under CrossOver) to the console instead of polling it
+    (see smartsoft_bridge.py). The console's messages on the way through update the page and
+    Art-Net like polled ones; --capture also logs what SmartSoft sends, as "sent" lines."""
+    capture_f = open(capture_path, "a") if capture_path else None
+    capture_t0 = time.time()
+    if capture_f:
+        print(f"[consolelink] raw capture logging to {capture_path}", file=sys.stderr)
+
+    def on_message(kind, obj_type, data):
+        if capture_f:
+            capture_f.write(f"t={time.time() - capture_t0:8.3f} {kind:8s} "
+                            f"type=0x{obj_type:02x} len={len(data)} raw={data.hex()}\n")
+            capture_f.flush()
+        if kind == "payload":
+            handle_payload(obj_type, data)
+        elif kind == "sent" and debug:
+            print(f"[smartsoft] t={time.time() - _t_start:7.3f}  sent type=0x{obj_type:02x} "
+                  f"len={len(data)} raw={data[:16].hex()}", file=sys.stderr)
+
+    bridge.on_message = on_message
+    try:
+        bridge.serve_forever(stop_event)
+    finally:
+        update_state(connected=False, device=None)
+        if capture_f:
+            capture_f.close()
+
+
 def _int_in_range(text, lo, hi):
     """int(text) if it is a plain decimal in lo..hi, else None."""
     return int(text) if text.isdecimal() and lo <= int(text) <= hi else None
@@ -867,6 +908,14 @@ def build_parser():
                               "optional. The password travels in the URL over plain HTTP, so it "
                               "keeps casual users out, nothing more: use it on a network you "
                               "trust.")
+    parser.add_argument("--smartsoft-bridge", metavar="PORT", type=int, nargs="?",
+                         const=smartsoft_bridge.DEFAULT_PORT, default=None,
+                         help="Let ETC SmartSoft for Windows, run under CrossOver on this Mac, "
+                              "drive the console: ConsoleLink relays it over localhost (default "
+                              f"port {smartsoft_bridge.DEFAULT_PORT}) instead of polling the "
+                              "console itself. Needs the bridge DLL installed in the CrossOver "
+                              "bottle. The page and Art-Net keep mirroring the console, "
+                              "read-only.")
     artnet.add_arguments(parser)
     return parser
 
@@ -886,6 +935,7 @@ class Settings:
     artnet_keepalive: float = artnet.DEFAULT_KEEPALIVE_S
     debug: bool = False
     capture: str = ""
+    smartsoft_bridge: int | None = None  # port to relay SmartSoft on (--smartsoft-bridge), None = off
 
     @classmethod
     def from_args(cls, args):
@@ -893,7 +943,8 @@ class Settings:
         return cls(web=not args.no_web, listen=args.listen, port=args.port, allow_write=args.allow_write is not None,
                    password=args.allow_write or "", artnet_dest=args.artnet,
                    artnet_universe=args.artnet_universe, artnet_rate=args.artnet_rate,
-                   artnet_keepalive=args.artnet_keepalive, debug=args.debug, capture=args.capture)
+                   artnet_keepalive=args.artnet_keepalive, debug=args.debug, capture=args.capture,
+                   smartsoft_bridge=args.smartsoft_bridge)
 
     def validate(self):
         """Raise ValueError (message ready to show to the user) for a setting that makes no sense."""
@@ -906,6 +957,16 @@ class Settings:
         if self.allow_write and self.listen == "network" and not self.password:
             raise ValueError("control from other devices on the network needs a password: they "
                              "could otherwise control the console")
+        if self.smartsoft_bridge is not None:
+            if not 0 <= self.smartsoft_bridge <= 65535:
+                raise ValueError("the SmartSoft bridge port must be between 0 and 65535")
+            if self.allow_write:
+                raise ValueError("control from the page isn't available with the SmartSoft "
+                                 "bridge: SmartSoft drives the console")
+
+
+class BridgePortError(OSError):
+    """Service.start() couldn't bind the SmartSoft bridge port (as opposed to the web port)."""
 
 
 class Service:
@@ -922,11 +983,17 @@ class Service:
         self._server = None
         self._server_thread = None
         self._artnet = None
+        self._bridge = None
 
     @property
     def port(self):
         """The port actually bound (differs from settings.port when that is 0), or None."""
         return self._server.server_port if self._server else None
+
+    @property
+    def bridge_port(self):
+        """The SmartSoft bridge's bound port, or None when it is off."""
+        return self._bridge.port if self._bridge else None
 
     def start(self):
         global debug, capture_path, artnet_sender, write_enabled, write_password
@@ -938,6 +1005,13 @@ class Service:
         try:
             if s.web:
                 self._server = QuietThreadingHTTPServer((LISTEN_HOSTS[s.listen], s.port), Handler)
+            if s.smartsoft_bridge is not None:
+                backend = libusb_package.get_libusb1_backend() if libusb_package else None
+                try:
+                    self._bridge = smartsoft_bridge.BridgeServer(
+                        s.smartsoft_bridge, usb_backend=backend, on_console=bridge_console_changed)
+                except OSError as e:
+                    raise BridgePortError(e.errno, e.strerror) from e
         except OSError:
             self.stop()
             raise
@@ -955,7 +1029,11 @@ class Service:
         # Not a daemon thread: those are hard-killed at interpreter exit with no chance to run
         # their `finally` cleanup, which would leave the USB interface claimed/pipes stalled for
         # the next run. stop() joins it, so release_interface() runs on a normal Ctrl+C.
-        self._poll_thread = threading.Thread(target=poll_forever, args=(self._stop_event,))
+        if self._bridge:
+            self._poll_thread = threading.Thread(target=bridge_forever,
+                                                 args=(self._stop_event, self._bridge))
+        else:
+            self._poll_thread = threading.Thread(target=poll_forever, args=(self._stop_event,))
         self._poll_thread.start()
         if self._server:
             self._server_thread = threading.Thread(target=self._server.serve_forever,
@@ -980,18 +1058,22 @@ class Service:
             if self._poll_thread.is_alive():
                 print("[consolelink] the console is still busy after 5 s; it may need a USB "
                       "reset on the next start", file=sys.stderr)
+        elif self._bridge is not None:
+            self._bridge.close()  # bound, but start() failed before serving
         if self._artnet is not None:
             artnet_sender = None
             self._artnet.stop()
         self._server = self._server_thread = self._poll_thread = self._artnet = None
+        self._bridge = None
 
 
 def check_args(parser, args):
     """Reject option combinations that make no sense (parser.error exits), and resolve the
     --listen default ("localhost")."""
-    if args.no_web and not (args.debug or args.capture or args.artnet is not None):
-        parser.error("--no-web needs at least one of --debug, --capture, --artnet "
-                     "(otherwise there is nothing to do)")
+    if args.no_web and not (args.debug or args.capture or args.artnet is not None
+                            or args.smartsoft_bridge is not None):
+        parser.error("--no-web needs at least one of --debug, --capture, --artnet, "
+                     "--smartsoft-bridge (otherwise there is nothing to do)")
     if args.allow_write is not None and args.no_web:
         parser.error("--allow-write needs the web page (drop --no-web)")
     if args.listen and args.no_web:
@@ -1013,12 +1095,19 @@ def main():
         service = Service(settings).start()
     except ValueError as e:
         parser.error(str(e))
+    except BridgePortError as e:
+        sys.exit(f"Can't listen for SmartSoft on port {settings.smartsoft_bridge}: {e}")
     except OSError as e:
         sys.exit(f"Can't listen on port {settings.port}: {e}")
     try:
+        if service.bridge_port is not None:
+            print(f"SmartSoft bridge on 127.0.0.1:{service.bridge_port}: start SmartSoft in "
+                  "CrossOver.")
         if settings.web:
             print(f"Serving on http://{LISTEN_HOSTS[settings.listen]}:{service.port} "
                   "-- Ctrl+C to stop.")
+        elif service.bridge_port is not None:
+            print("No web server -- Ctrl+C to stop.")
         else:
             print("Polling the console, no web server -- Ctrl+C to stop.")
         while service.wait(0.5):  # a timeout keeps Ctrl+C responsive

@@ -707,6 +707,10 @@ def bridge_forever(stop_event, bridge):
                   f"len={len(data)} raw={data[:16].hex()}", file=sys.stderr)
 
     bridge.on_message = on_message
+    from . import smartsoft_install   # only needed in this mode
+    warning = smartsoft_install.startup_warning()
+    if warning:
+        print(f"[smartsoft-bridge] {warning}", file=sys.stderr)
     try:
         bridge.serve_forever(stop_event)
     finally:
@@ -883,7 +887,9 @@ class QuietThreadingHTTPServer(ThreadingHTTPServer):
 
 def build_parser():
     parser = argparse.ArgumentParser(
-        description="Local web app showing live console state (physical faders + per-mode intensities).")
+        description="Local web app showing live console state (physical faders + per-mode intensities).",
+        epilog="Also: `consolelink smartsoft install|uninstall|status` sets up the SmartSoft "
+               "bridge in a CrossOver bottle (see --smartsoft-bridge).")
     parser.add_argument("--debug", action="store_true",
                          help="Per-control change logging to stderr, plus a liveness "
                               "heartbeat, handshake diagnostics, and a line for every message "
@@ -1091,6 +1097,9 @@ def check_args(parser, args):
 
 
 def main():
+    if sys.argv[1:2] == ["smartsoft"]:  # `consolelink smartsoft install|uninstall|status`
+        from . import smartsoft_install
+        sys.exit(smartsoft_install.main(sys.argv[2:]))
     parser = build_parser()
     args = parser.parse_args()
     check_args(parser, args)

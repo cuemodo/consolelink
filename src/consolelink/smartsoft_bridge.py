@@ -21,7 +21,10 @@ one reply with op | 0x80:
   WRITE  0x02  [data]                     -> [written:4]
   READ   0x03  [max_len:4][timeout_ms:4]  -> [data]
 
-Status: 0 ok, 1 timeout (READ: nothing arrived), 2 no console, 3 I/O error, 4 bad request.
+Status: 0 ok, 1 timeout (READ: nothing arrived), 2 no console, 3 I/O error, 4 bad request,
+5 version mismatch (HELLO from a DLL speaking another protocol version; the reply carries this
+side's [version:2], and the DLL then shows SmartSoft no console: update the DLL with
+`consolelink smartsoft install`).
 HELLO flag 1 starts a session: replies left on the console by an earlier, interrupted session
 are drained first. Without it, HELLO only asks whether the console is there. One WRITE / READ is
 one bulk transfer on the console's vendor interface (OUT / IN endpoint), so transfer
@@ -45,7 +48,7 @@ DEFAULT_PORT = 47561
 FRAME = struct.Struct("<BBHI")
 OP_HELLO, OP_WRITE, OP_READ = 0x01, 0x02, 0x03
 REPLY = 0x80
-ST_OK, ST_TIMEOUT, ST_NO_DEVICE, ST_IO_ERROR, ST_BAD_REQUEST = range(5)
+ST_OK, ST_TIMEOUT, ST_NO_DEVICE, ST_IO_ERROR, ST_BAD_REQUEST, ST_VERSION_MISMATCH = range(6)
 HELLO_SESSION_START = 0x0001
 
 MAX_FRAME = 1 << 20      # bigger than any transfer the console makes (~2 KB)
@@ -257,6 +260,7 @@ class BridgeServer:
         # after construction.
         self.on_message = on_message or (lambda kind, obj_type, data: None)
         self.tap = StreamTap(self._emit)
+        self._reported_versions = set()   # DLL protocol versions already reported as mismatched
 
     def _emit(self, kind, obj_type, data):
         self.on_message(kind, obj_type, data)
@@ -266,7 +270,15 @@ class BridgeServer:
         if op == OP_HELLO:
             if len(payload) < 4:
                 return pack_frame(op | REPLY, ST_BAD_REQUEST)
-            _version, flags = struct.unpack_from("<HH", payload, 0)
+            version, flags = struct.unpack_from("<HH", payload, 0)
+            if version != PROTOCOL_VERSION:
+                if version not in self._reported_versions:
+                    self._reported_versions.add(version)
+                    log(f"SmartSoft's bridge DLL speaks protocol {version}, this ConsoleLink "
+                        f"speaks {PROTOCOL_VERSION}: quit SmartSoft, run `consolelink smartsoft "
+                        "install`, then start SmartSoft again")
+                return pack_frame(op | REPLY, ST_VERSION_MISMATCH,
+                                  struct.pack("<H", PROTOCOL_VERSION))
             with self.lock:
                 if self.console.identity is None:
                     return pack_frame(op | REPLY, ST_NO_DEVICE)

@@ -26,17 +26,33 @@ unchanged. Nothing of SmartSoft is modified: the DLL is one added file, and the 
 applies to SmartSoft.exe. See the comments at the top of `shim.c` and `backend_tcp.c`, and
 `src/consolelink/smartsoft_bridge.py` for the TCP protocol.
 
-## Build
+## Install
 
-Needs the mingw-w64 cross compiler (`brew install mingw-w64`):
+Released ConsoleLink packages include the built DLL. With SmartSoft installed in a CrossOver bottle
+and not running:
 
 ```
-make            # -> build/hid.dll (32-bit)
+consolelink smartsoft install      # also: status, uninstall; --bottle NAME, --prefix PATH (plain Wine)
 ```
 
-## Install into a CrossOver bottle
+It copies `hid.dll` into SmartSoft's `Binaries` folder and sets the DLL override
+`HKCU\Software\Wine\AppDefaults\SmartSoft.exe\DllOverrides`: `hid` = `native,builtin`, so only
+SmartSoft.exe loads it. It refuses while SmartSoft runs (any process with `SmartSoft.exe` open,
+from `lsof`), and won't replace a `hid.dll` that isn't the bridge's without `--force` (which keeps
+it as `hid.dll.orig`; `uninstall` restores it). See `src/consolelink/smartsoft_install.py`.
 
-With `BOTTLE` the bottle's name and `SMARTSOFT` its SmartSoft folder:
+The DLL and ConsoleLink must match, so after upgrading ConsoleLink run `consolelink smartsoft
+install` again (SmartSoft closed). Two checks catch a forgotten update:
+
+- At startup, `consolelink --smartsoft-bridge` compares the bottle's `hid.dll` with the one it
+  ships, and prints a warning if it is missing, different, or lacks its DLL override.
+- The DLL's HELLO carries its protocol version. If ConsoleLink speaks another one, it answers
+  status 5 (version mismatch) with its own version, and both sides log the mismatch once,
+  ConsoleLink on stderr and the DLL in its log. SmartSoft then sees no console.
+
+### By hand
+
+The same two changes, with `BOTTLE` the bottle's name:
 
 ```
 BOTTLE=SmartSoft
@@ -47,11 +63,22 @@ cp build/hid.dll "$SMARTSOFT/Binaries/hid.dll"
 "$WINE" --bottle "$BOTTLE" reg add 'HKCU\Software\Wine\AppDefaults\SmartSoft.exe\DllOverrides' /v hid /d native,builtin /f
 ```
 
-To uninstall, delete `Binaries/hid.dll` and the override:
+To undo: delete `Binaries/hid.dll`, and
+`"$WINE" --bottle "$BOTTLE" reg delete 'HKCU\Software\Wine\AppDefaults\SmartSoft.exe\DllOverrides' /v hid /f`.
+
+## Build
+
+Needs the mingw-w64 cross compiler (macOS: `brew install mingw-w64`; Debian/Ubuntu:
+`apt install gcc-mingw-w64-i686`):
 
 ```
-"$WINE" --bottle "$BOTTLE" reg delete 'HKCU\Software\Wine\AppDefaults\SmartSoft.exe\DllOverrides' /v hid /f
+make            # -> build/hid.dll (32-bit)
+make package    # also copies it into the Python package (src/consolelink/bridge_dll/, gitignored)
 ```
+
+The release workflow runs `make package` before building the Python package, so released packages
+ship the DLL. From a git checkout, `consolelink smartsoft install` uses `build/hid.dll` if the
+package has none.
 
 ## Use
 

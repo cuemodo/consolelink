@@ -31,6 +31,7 @@ Use at your own risk; no warranty is provided.
 - [Usage](#usage)
   - [macOS menu-bar app](#macos-menu-bar-app)
   - [Art-Net output](#art-net-output)
+  - [SmartSoft under CrossOver (macOS)](#smartsoft-under-crossover-macos)
 - [Contributing](#contributing)
 - [License](#license)
 
@@ -253,6 +254,45 @@ console is unplugged, the last frame keeps being sent.
 
 Frames go console → USB → this program → UDP with no timing guarantee, so this is fine for
 visualisation and casual use, not for anything where a stall or a frozen frame would be a problem.
+
+### SmartSoft under CrossOver (macOS)
+
+**Experimental.** ETC's SmartSoft for Windows runs on a Mac under
+[CrossOver](https://www.codeweavers.com/crossover), but CrossOver can't pass the console's USB
+connection through to it. ConsoleLink can bridge the two: SmartSoft talks to a small stand-in
+for the console's USB driver inside CrossOver, which relays everything to ConsoleLink on the Mac,
+which talks to the console. SmartSoft then works as it does on Windows.
+
+Once, with SmartSoft installed in a CrossOver bottle and not running:
+
+```
+consolelink smartsoft install
+```
+
+This copies the bridge's `hid.dll` next to `SmartSoft.exe` and sets a Wine DLL override for
+SmartSoft.exe only; nothing of SmartSoft is modified. With several bottles holding SmartSoft, add
+`--bottle NAME`. `consolelink smartsoft status` shows what is installed, and
+`consolelink smartsoft uninstall` removes both changes. Neither asks for any macOS permission.
+
+Then, each time:
+
+```
+consolelink --smartsoft-bridge
+```
+
+and start SmartSoft in CrossOver: it finds the console and selects SmartFade ML by itself. Start
+ConsoleLink first: if it isn't running, SmartSoft sees no console, as if it were unplugged. While
+SmartSoft runs, the web page and Art-Net keep following the console, read-only. If ConsoleLink
+restarts or the console is unplugged, SmartSoft picks up again once it is back.
+
+After upgrading ConsoleLink, quit SmartSoft and run `consolelink smartsoft install` again: it
+updates the DLL if the new version ships a different one. `consolelink --smartsoft-bridge` says so
+at startup when the bottle's DLL is out of date, and if the two can no longer understand each
+other, both refuse to connect and say what to do.
+
+Tested with SmartSoft 3.0.2 and CrossOver 26.3 on Apple silicon. Under plain Wine (Linux), use
+`consolelink smartsoft install --prefix PATH`: untested. Not on Windows, where SmartSoft reaches
+the console directly. Details: [`bridge/windows/README.md`](https://github.com/cuemodo/consolelink/blob/main/bridge/windows/README.md).
 
 ## Contributing
 

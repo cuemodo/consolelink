@@ -7,8 +7,9 @@
  *   HELLO 0x01 [version:2][flags:2]      -> [version:2][vid:2][pid:2][bcd:2][product ASCII]
  *   WRITE 0x02 [data]                    -> [written:4]
  *   READ  0x03 [max_len:4][timeout_ms:4] -> [data]
- * Status: 0 ok, 1 timeout, 2 no console, 3 I/O error, 4 bad request. HELLO flag 1 starts a
- * session (the Mac side drops replies left over from an interrupted one).
+ * Status: 0 ok, 1 timeout, 2 no console, 3 I/O error, 4 bad request, 5 version mismatch (the
+ * reply carries ConsoleLink's [version:2]; SmartSoft is then shown no console). HELLO flag 1
+ * starts a session (the Mac side drops replies left over from an interrupted one).
  *
  * Address: SMARTSOFT_BRIDGE=tcp (127.0.0.1:47561), tcp:PORT or tcp:HOST:PORT. CrossOver
  * programs are ordinary Mac processes, so 127.0.0.1 is the Mac itself.
@@ -29,6 +30,7 @@
 #define OP_REPLY 0x80
 #define ST_OK      0
 #define ST_TIMEOUT 1
+#define ST_VERSION_MISMATCH 5
 #define HELLO_SESSION_START 0x0001
 #define IO_SLACK_MS 5000          /* socket timeout beyond the requested USB timeout */
 /* While ConsoleLink is unreachable or has no console, each transfer fails only after this long. SmartSoft retries
@@ -190,6 +192,16 @@ static int hello(SOCKET s, unsigned short flags, bridge_identity *id)
     unsigned char rep[8 + sizeof(id->product)];
     unsigned n = 0;
     int st = request(s, OP_HELLO, req, sizeof(req), rep, sizeof(rep) - 1, &n);
+    if (st == ST_VERSION_MISMATCH) {
+        static int reported;   /* once per run: SmartSoft lists devices repeatedly */
+        if (!reported) {
+            reported = 1;
+            bridge_log("tcp: ConsoleLink speaks protocol %u, this DLL %u: quit SmartSoft, run "
+                       "`consolelink smartsoft install`, then start SmartSoft again",
+                       n >= 2 ? (unsigned)(rep[0] | rep[1] << 8) : 0u, PROTOCOL_VERSION);
+        }
+        return st;
+    }
     if (st == ST_OK && id) {
         if (n < 8)
             return -1;
@@ -210,7 +222,7 @@ static int tcp_present(void)
     int st = hello(s, 0, NULL);
     closesocket(s);
     report(1, 0);
-    if (st != ST_OK)
+    if (st != ST_OK && st != ST_VERSION_MISMATCH)
         bridge_log("tcp: ConsoleLink is running but has no console (status %d)", st);
     return st == ST_OK;
 }

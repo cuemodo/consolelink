@@ -692,6 +692,8 @@ BOOL WINAPI DllMain(HINSTANCE inst, DWORD reason, LPVOID reserved)
     DWORD len = GetEnvironmentVariableA("SMARTSOFT_BRIDGE_TRACE", trace, sizeof(trace));
     trace_io = len && len < sizeof(trace) && trace[0] == '1';
     choose_backend();
+    /* `consolelink smartsoft` recognises this DLL by the text "---- SmartSoft bridge loaded":
+       keep it, or update MARKER in smartsoft_install.py. */
     bridge_log("---- SmartSoft bridge loaded (backend %s%s%s)", backend->name,
                backend == &tcp_backend ? " " : "",
                backend == &tcp_backend ? tcp_backend_address() : "");

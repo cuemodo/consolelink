@@ -249,3 +249,14 @@ def test_service_binds_and_releases_the_bridge_port():
         service.stop()
     with pytest.raises(OSError):
         socket.create_connection(("127.0.0.1", port), timeout=1).close()
+
+
+def test_hello_from_another_protocol_version_is_refused(server, capsys):
+    for _ in range(2):
+        op, status, payload = unpack_reply(
+            server.handle_request(sb.OP_HELLO, struct.pack("<HH", sb.PROTOCOL_VERSION + 1, 1)))
+        assert (op, status) == (sb.OP_HELLO | sb.REPLY, sb.ST_VERSION_MISMATCH)
+        assert payload == struct.pack("<H", sb.PROTOCOL_VERSION)
+    assert server.console.drained == 0   # no session was started
+    err = capsys.readouterr().err
+    assert err.count("consolelink smartsoft install") == 1   # reported once, not per HELLO

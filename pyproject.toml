@@ -56,7 +56,7 @@ version = {attr = "consolelink.protocol.VERSION"}
 where = ["src"]
 
 [tool.setuptools.package-data]
-consolelink = ["static/*", "menubar_icons/*"]
+consolelink = ["static/*", "menubar_icons/*", "bridge_dll/*.dll"]  # bridge_dll: built by `make -C bridge/windows package`
 
 [tool.pytest.ini_options]
 pythonpath = ["src"]

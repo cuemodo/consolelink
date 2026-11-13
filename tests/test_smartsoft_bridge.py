@@ -205,7 +205,7 @@ def test_relays_over_tcp(server):
 
 # ---- command line and settings
 
-def test_bridge_and_page_control_are_exclusive():
+def test_bridge_and_page_control_are_exclusive(bridge_platform):
     with pytest.raises(ValueError):
         app.Settings(smartsoft_bridge=sb.DEFAULT_PORT, allow_write=True).validate()
     app.Settings(smartsoft_bridge=sb.DEFAULT_PORT).validate()
@@ -227,7 +227,7 @@ def test_bridge_refused_on_windows(monkeypatch):
         app.check_args(parser, parser.parse_args(["--smartsoft-bridge"]))
 
 
-def test_command_line_option():
+def test_command_line_option(bridge_platform):
     parser = app.build_parser()
     args = parser.parse_args(["--smartsoft-bridge", "--no-web"])
     app.check_args(parser, args)   # --no-web is fine: relaying is something to do
@@ -237,7 +237,7 @@ def test_command_line_option():
     assert app.Settings.from_args(parser.parse_args([])).smartsoft_bridge is None
 
 
-def test_service_binds_and_releases_the_bridge_port():
+def test_service_binds_and_releases_the_bridge_port(bridge_platform):
     service = app.Service(app.Settings(web=False, smartsoft_bridge=0)).start()
     try:
         port = service.bridge_port

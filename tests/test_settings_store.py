@@ -73,7 +73,7 @@ def test_unavailable_keychain_does_not_stop_loading(tmp_path):
     assert s.password == ""
 
 
-def test_smartsoft_bridge_is_remembered(store):
+def test_smartsoft_bridge_is_remembered(store, bridge_platform):
     store.save(app.Settings(smartsoft_bridge=47561))
     assert store.load().smartsoft_bridge == 47561
     store.save(app.Settings())
@@ -87,7 +87,7 @@ def test_smartsoft_bridge_of_the_wrong_type_is_off(store, value):
     assert store.load().smartsoft_bridge is None
 
 
-def test_bridge_with_page_control_comes_up_read_only(store):
+def test_bridge_with_page_control_comes_up_read_only(store, bridge_platform):
     store.path.parent.mkdir(parents=True)
     store.path.write_text(json.dumps({"smartsoft_bridge": 47561, "allow_write": True}))
     s = store.load()

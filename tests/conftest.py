@@ -67,3 +67,11 @@ def load_capture(name):
 @pytest.fixture
 def capture():
     return load_capture
+
+
+@pytest.fixture
+def bridge_platform(monkeypatch):
+    """Run as on macOS, where the SmartSoft bridge is allowed: Settings.validate() refuses it on
+    Windows (SmartSoft runs natively there), so bridge tests would otherwise fail on Windows CI."""
+    import sys
+    monkeypatch.setattr(sys, "platform", "darwin")

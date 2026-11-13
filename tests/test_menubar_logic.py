@@ -98,7 +98,7 @@ def test_menubar_module_imports_without_rumps(monkeypatch):
 
 # ---- the SmartSoft bridge toggle
 
-def test_bridge_toggle_turns_off_control_from_the_page():
+def test_bridge_toggle_turns_off_control_from_the_page(bridge_platform):
     s = app.Settings(allow_write=True)
     on = logic.changed(s, **logic.bridge_changes(s, True))
     assert on.smartsoft_bridge == smartsoft_bridge.DEFAULT_PORT and not on.allow_write

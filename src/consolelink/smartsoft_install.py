@@ -1,4 +1,4 @@
-"""
+r"""
 `consolelink smartsoft install|uninstall|status`: sets up the SmartSoft bridge in a CrossOver
 bottle (or any Wine prefix), so ETC SmartSoft for Windows reaches the console through
 `consolelink --smartsoft-bridge` (see smartsoft_bridge.py).

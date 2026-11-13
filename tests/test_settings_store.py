@@ -71,3 +71,30 @@ def test_network_control_without_a_password_comes_up_read_only(store):
 def test_unavailable_keychain_does_not_stop_loading(tmp_path):
     s = SettingsStore(tmp_path / "s.json", FakePasswords(fail=True)).load()
     assert s.password == ""
+
+
+def test_smartsoft_bridge_is_remembered(store):
+    store.save(app.Settings(smartsoft_bridge=47561))
+    assert store.load().smartsoft_bridge == 47561
+    store.save(app.Settings())
+    assert store.load().smartsoft_bridge is None
+
+
+@pytest.mark.parametrize("value", ["47561", True, 1.5])
+def test_smartsoft_bridge_of_the_wrong_type_is_off(store, value):
+    store.path.parent.mkdir(parents=True)
+    store.path.write_text(json.dumps({"smartsoft_bridge": value}))
+    assert store.load().smartsoft_bridge is None
+
+
+def test_bridge_with_page_control_comes_up_read_only(store):
+    store.path.parent.mkdir(parents=True)
+    store.path.write_text(json.dumps({"smartsoft_bridge": 47561, "allow_write": True}))
+    s = store.load()
+    assert (s.smartsoft_bridge, s.allow_write) == (47561, False)
+
+
+def test_bridge_port_out_of_range_turns_it_off(store):
+    store.path.parent.mkdir(parents=True)
+    store.path.write_text(json.dumps({"smartsoft_bridge": 70000}))
+    assert store.load().smartsoft_bridge is None

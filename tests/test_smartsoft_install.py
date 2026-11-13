@@ -270,3 +270,10 @@ def test_startup_warning_stays_quiet_when_it_cannot_tell(target, monkeypatch):
     assert si.startup_warning(BRIDGE_DLL, broken) is None      # never stops the bridge
     monkeypatch.setattr(si, "packaged_dll", lambda: None)
     assert si.startup_warning(None, lambda: target) is None    # no DLL in this package
+
+
+def test_setup_problem(target):
+    assert si.setup_problem(BRIDGE_DLL, lambda: target) == ('CrossOver bottle "SmartSoft"',
+                                                            "isn't installed")
+    si.install(target, BRIDGE_DLL, run=FakeSystem(target).run, out=quiet)
+    assert si.setup_problem(BRIDGE_DLL, lambda: target) is None

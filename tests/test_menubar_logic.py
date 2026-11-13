@@ -3,7 +3,7 @@ import socket
 
 import pytest
 
-from consolelink import app, menubar_logic as logic
+from consolelink import app, menubar_logic as logic, smartsoft_bridge
 
 
 def test_status_and_title():
@@ -94,3 +94,34 @@ def test_menubar_module_imports_without_rumps(monkeypatch):
     with pytest.raises(SystemExit) as exc:
         mod.main()
     assert "macOS" in str(exc.value)
+
+
+# ---- the SmartSoft bridge toggle
+
+def test_bridge_toggle_turns_off_control_from_the_page():
+    s = app.Settings(allow_write=True)
+    on = logic.changed(s, **logic.bridge_changes(s, True))
+    assert on.smartsoft_bridge == smartsoft_bridge.DEFAULT_PORT and not on.allow_write
+    off = logic.changed(on, **logic.bridge_changes(on, False))
+    assert off.smartsoft_bridge is None
+
+
+def test_bridge_setup_message():
+    text = logic.bridge_setup_message(('CrossOver bottle "Smartfade"', "is out of date"))
+    assert text.startswith('The SmartSoft bridge DLL in CrossOver bottle "Smartfade" is out of date')
+    assert "Quit SmartSoft" in text and "Install" in text
+
+
+def test_install_bridge(monkeypatch):
+    from consolelink import smartsoft_install as si
+    calls = []
+    monkeypatch.setattr(si, "find_target", lambda: "target")
+    monkeypatch.setattr(si, "packaged_dll", lambda: b"dll")
+    monkeypatch.setattr(si, "install", lambda target, dll, out: calls.append((target, dll)))
+    assert logic.install_bridge() is None
+    assert calls == [("target", b"dll")]
+
+    def running(*a, **k):
+        raise si.SetupError("SmartSoft is running in CrossOver bottle \"S\" (pid 42): quit it first")
+    monkeypatch.setattr(si, "install", running)
+    assert "quit it first" in logic.install_bridge()

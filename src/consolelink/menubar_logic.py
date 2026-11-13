@@ -1,10 +1,11 @@
 """The decisions behind the macOS menu-bar app, kept free of rumps/Cocoa so they run (and are
-tested) on any OS: what the status line says, which address another device should open, and whether a
-settings change is allowed."""
+tested) on any OS: what the status line says, which address another device should open, whether a
+settings change is allowed, and the SmartSoft bridge's setup."""
 import dataclasses
 import socket
+import subprocess
 
-from . import app
+from . import app, smartsoft_bridge
 
 ICON_CONNECTED = "connected"  # file names (without .png) in menubar_icons/
 ICON_WAITING = "waiting"
@@ -74,3 +75,31 @@ def parse_universe(text):
     if not text.isdecimal() or int(text) > 0x7FFE:
         raise ValueError("The Art-Net universe must be a number between 0 and 32766.")
     return int(text)
+
+
+# ---- the SmartSoft bridge (SmartSoft for Windows under CrossOver drives the console)
+
+def bridge_changes(settings, on):
+    """The settings change for the bridge toggle. Turning it on also turns off control from the
+    page: SmartSoft drives the console, and the two can't both write to it."""
+    if on:
+        return {"smartsoft_bridge": smartsoft_bridge.DEFAULT_PORT, "allow_write": False}
+    return {"smartsoft_bridge": None}
+
+
+def bridge_setup_message(problem):
+    """The alert offering to install the bridge DLL, from smartsoft_install.setup_problem()."""
+    label, what = problem
+    return (f"The SmartSoft bridge DLL in {label} {what}, so SmartSoft won't find the console.\n\n"
+            "Quit SmartSoft if it is running, then click Install.")
+
+
+def install_bridge():
+    """`consolelink smartsoft install`, from the menu: None when done, or why it failed (ready to
+    show)."""
+    from . import smartsoft_install as si
+    try:
+        si.install(si.find_target(), si.packaged_dll(), out=lambda *a: None)
+    except (si.SetupError, OSError, subprocess.SubprocessError) as e:
+        return str(e)
+    return None

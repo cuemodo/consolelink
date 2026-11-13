@@ -6,7 +6,9 @@
 
 The menu shows whether the console is connected, opens the page, shows (and copies) the address
 for another device, and holds the settings: network access, control from the page, the control password
-(kept in the Keychain), the Art-Net destination and universe, and the port. A change is saved and
+(kept in the Keychain), the Art-Net destination and universe, the port, and the SmartSoft bridge
+(SmartSoft for Windows under CrossOver drives the console through ConsoleLink; it offers to install
+the bridge DLL in SmartSoft's bottle when that is missing or out of date). A change is saved and
 applied by stopping and restarting the service. Quit releases the USB interface first.
 
 Only the console can be claimed by one process at a time: don't run this and `consolelink` together.
@@ -70,6 +72,8 @@ class ConsoleLinkApp(rumps.App if rumps else object):
             pass  # "Show QR code…" will say so when it is used
         self._start_service_or_alert()
         self.rebuild_menu()
+        if self.settings.smartsoft_bridge is not None:
+            self.check_bridge_setup()
         self.timer = rumps.Timer(self.refresh, 1)
         self.timer.start()
         self._refresh_while_menu_open()
@@ -143,13 +147,19 @@ class ConsoleLinkApp(rumps.App if rumps else object):
         for item in (
             rumps.MenuItem("Remote access"),   # header: no callback, so greyed out
             toggle("Allow other devices on the network", self.toggle_network, s.listen == "network"),
-            toggle("Allow control from the page", self.toggle_write, s.allow_write),
+            # Greyed out (no callback) while SmartSoft drives the console: the two exclude each other.
+            toggle("Allow control from the page",
+                   None if s.smartsoft_bridge is not None else self.toggle_write, s.allow_write),
             rumps.MenuItem("Control password…", callback=self.set_password),
             rumps.MenuItem(f"Port… ({s.port})", callback=self.set_port),
             None,                              # separator
             rumps.MenuItem("Art-Net"),         # header
             rumps.MenuItem(f"Destination… ({art})", callback=self.set_artnet),
             rumps.MenuItem(f"Universe… ({s.artnet_universe})", callback=self.set_universe),
+            None,
+            rumps.MenuItem("SmartSoft (CrossOver)"),   # header
+            toggle("Relay SmartSoft to the console", self.toggle_bridge,
+                   s.smartsoft_bridge is not None),
         ):
             settings_menu.add(item)
         items = [self.status_item, rumps.MenuItem("Open ConsoleLink", callback=self.open_page)]
@@ -231,6 +241,30 @@ class ConsoleLinkApp(rumps.App if rumps else object):
                 return self.rebuild_menu()
             changes["password"] = password
         self.apply(**changes) or self.rebuild_menu()
+
+    def toggle_bridge(self, _):
+        turning_on = self.settings.smartsoft_bridge is None
+        if self.apply(**logic.bridge_changes(self.settings, turning_on)):
+            if turning_on:
+                self.check_bridge_setup()
+        else:
+            self.rebuild_menu()
+
+    def check_bridge_setup(self):
+        """Offer to install the bridge DLL when SmartSoft's bottle lacks it, or has an old one."""
+        from . import smartsoft_install
+        problem = smartsoft_install.setup_problem()
+        if problem is None:
+            return
+        if rumps.alert("SmartSoft bridge", logic.bridge_setup_message(problem),
+                       ok="Install", cancel="Not now") != 1:
+            return
+        error = logic.install_bridge()
+        if error:
+            rumps.alert("SmartSoft bridge", f"Can't install the bridge DLL: {error}")
+        else:
+            rumps.alert("SmartSoft bridge", "Installed. Start SmartSoft in CrossOver: it finds "
+                                            "the console through ConsoleLink.")
 
     def set_password(self, _):
         password = _ask("Control password",

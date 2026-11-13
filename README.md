@@ -223,10 +223,11 @@ The menu-bar icon (the favicon's three faders, faded while there is no console) 
   with a phone or tablet camera to open the page. The code holds the address only, never the
   password.
 - **Settings**: allow other devices on the network (`--listen network`), allow control from the
-  page (`--allow-write`), the control password, the Art-Net destination and universe, and the
-  port. The password is kept in the macOS Keychain; the rest in
-  `~/Library/Application Support/ConsoleLink/settings.json`. A change is saved and applied right
-  away (the service restarts).
+  page (`--allow-write`), the control password, the Art-Net destination and universe, the
+  port, and **Relay SmartSoft to the console** (`--smartsoft-bridge`, see
+  [SmartSoft under CrossOver](#smartsoft-under-crossover-macos)). The password is kept in the
+  macOS Keychain; the rest in `~/Library/Application Support/ConsoleLink/settings.json`. A change
+  is saved and applied right away (the service restarts).
 - **Quit ConsoleLink**: releases the console before exiting.
 
 Only one program can use the console at a time, so don't run `consolelink` and the menu-bar app
@@ -280,7 +281,9 @@ Then, each time:
 consolelink --smartsoft-bridge
 ```
 
-and start SmartSoft in CrossOver: it finds the console and selects SmartFade ML by itself. Start
+(or, in the menu-bar app, turn on Settings > **Relay SmartSoft to the console**; it offers to
+install or update the DLL when needed) and start SmartSoft in CrossOver: it finds the console and
+selects SmartFade ML by itself. Start
 ConsoleLink first: if it isn't running, SmartSoft sees no console, as if it were unplugged. While
 SmartSoft runs, the web page and Art-Net keep following the console, read-only. If ConsoleLink
 restarts or the console is unplugged, SmartSoft picks up again once it is back.

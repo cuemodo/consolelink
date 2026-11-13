@@ -278,10 +278,10 @@ def status(target, dll_bytes, run=subprocess.run, out=print):
         out("(this ConsoleLink has no bridge DLL to install: see `consolelink smartsoft install`)")
 
 
-def startup_warning(dll_bytes=None, find=find_target):
-    """For `consolelink --smartsoft-bridge`: a line saying the bottle's bridge needs (re)installing,
-    or None when it is up to date -- or when that can't be told (no bottle with SmartSoft, several,
-    no DLL in this package). Never raises: a check that fails must not stop the bridge."""
+def setup_problem(dll_bytes=None, find=find_target):
+    """What keeps the bridge from working in SmartSoft's bottle, as (bottle label, problem), or
+    None when it is set up -- or when that can't be told (no bottle with SmartSoft, several, no
+    DLL in this package). Never raises: a check that fails must not stop the bridge."""
     try:
         dll_bytes = packaged_dll() if dll_bytes is None else dll_bytes
         if dll_bytes is None:
@@ -293,12 +293,19 @@ def startup_warning(dll_bytes=None, find=find_target):
                    "foreign": "isn't installed (another hid.dll is there)"}.get(state)
         if problem is None and override_value(target) != OVERRIDE_VALUE:
             problem = "is missing its DLL override"
-        if problem is None:
-            return None
-        return (f"the bridge DLL in {target.label} {problem}: quit SmartSoft, then run "
-                "`consolelink smartsoft install`")
+        return (target.label, problem) if problem else None
     except Exception:   # noqa: BLE001 -- see the docstring
         return None
+
+
+def startup_warning(dll_bytes=None, find=find_target):
+    """For `consolelink --smartsoft-bridge`: a line saying the bottle's bridge needs (re)installing,
+    or None (see setup_problem)."""
+    found = setup_problem(dll_bytes, find)
+    if found is None:
+        return None
+    label, problem = found
+    return f"the bridge DLL in {label} {problem}: quit SmartSoft, then run `consolelink smartsoft install`"
 
 
 def build_parser():

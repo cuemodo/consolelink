@@ -915,7 +915,7 @@ def build_parser():
                               f"port {smartsoft_bridge.DEFAULT_PORT}) instead of polling the "
                               "console itself. Needs the bridge DLL installed in the CrossOver "
                               "bottle. The page and Art-Net keep mirroring the console, "
-                              "read-only.")
+                              "read-only. Not on Windows: run SmartSoft directly there.")
     artnet.add_arguments(parser)
     return parser
 
@@ -958,6 +958,11 @@ class Settings:
             raise ValueError("control from other devices on the network needs a password: they "
                              "could otherwise control the console")
         if self.smartsoft_bridge is not None:
+            if sys.platform == "win32":
+                # SmartSoft reaches the console through ETC's driver there; ConsoleLink would
+                # need the console on WinUSB, which hides it from SmartSoft.
+                raise ValueError("the SmartSoft bridge is for SmartSoft under CrossOver or Wine; "
+                                 "on Windows, run SmartSoft directly")
             if not 0 <= self.smartsoft_bridge <= 65535:
                 raise ValueError("the SmartSoft bridge port must be between 0 and 65535")
             if self.allow_write:

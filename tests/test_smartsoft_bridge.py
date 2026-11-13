@@ -1,6 +1,7 @@
 """SmartSoft bridge: the TCP relay between the CrossOver DLL and the console (smartsoft_bridge.py)."""
 import socket
 import struct
+import sys
 import threading
 
 import pytest
@@ -208,6 +209,22 @@ def test_bridge_and_page_control_are_exclusive():
     with pytest.raises(ValueError):
         app.Settings(smartsoft_bridge=sb.DEFAULT_PORT, allow_write=True).validate()
     app.Settings(smartsoft_bridge=sb.DEFAULT_PORT).validate()
+
+
+@pytest.mark.parametrize("platform", ["darwin", "linux"])
+def test_bridge_allowed_off_windows(monkeypatch, platform):
+    monkeypatch.setattr(sys, "platform", platform)
+    app.Settings(smartsoft_bridge=sb.DEFAULT_PORT).validate()
+
+
+def test_bridge_refused_on_windows(monkeypatch):
+    monkeypatch.setattr(sys, "platform", "win32")
+    with pytest.raises(ValueError, match="on Windows, run SmartSoft directly"):
+        app.Settings(smartsoft_bridge=sb.DEFAULT_PORT).validate()
+    app.Settings().validate()   # without the bridge, Windows is fine
+    parser = app.build_parser()
+    with pytest.raises(SystemExit):   # the command line reports it through parser.error
+        app.check_args(parser, parser.parse_args(["--smartsoft-bridge"]))
 
 
 def test_command_line_option():
